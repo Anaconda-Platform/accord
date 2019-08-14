@@ -137,8 +137,10 @@ def backup_secrets_config_maps(process):
                         'get',
                         'secrets',
                         secret,
-                        f'-n {namespace}',
-                        '-o yaml',
+                        '-n',
+                        namespace,
+                        '-o',
+                        'yaml',
                         _out=fs
                     )
             except sh.ErrorReturnCode_1:
@@ -156,8 +158,10 @@ def backup_secrets_config_maps(process):
                         'get',
                         'configmaps',
                         cm,
-                        f'-n {namespace}',
-                        '-o yaml',
+                        '-n',
+                        namespace,
+                        '-o',
+                        'yaml',
                         _out=fcm
                     )
             except sh.ErrorReturnCode_1:

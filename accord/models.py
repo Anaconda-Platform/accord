@@ -187,7 +187,7 @@ class Accord(object):
             self.run_su_command(self.sync_user, set_permissions)
 
     def get_postgres_docker_container(self):
-        temp_pods = self.kubectl('get', 'pods', f'-n {self.namespace}')
+        temp_pods = self.kubectl('get', 'pods', '-n', self.namespace)
         for line in temp_pods:
             if 'postgres' in line:
                 temp = (re.sub(r'\s+', ' ', line)).split(' ')
@@ -198,7 +198,8 @@ class Accord(object):
             'describe',
             'pod',
             self.postgres_pod,
-            f'-n {self.namespace}'
+            '-n',
+            self.namespace
         )
         for line in temp_container:
             if 'docker://' in line:
@@ -238,7 +239,8 @@ class Accord(object):
         temp_secrets = self.kubectl(
             'get',
             'secrets',
-            '-n {0}'.format(self.namespace)
+            '-n',
+            self.namespace
         )
         for line in temp_secrets:
             if 'anaconda-credentials-user' in line:
