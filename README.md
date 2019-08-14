@@ -8,17 +8,22 @@ Use this Python package to help facilitate the backup and restore of your Anacon
 To backup the system, you'll need to install the ``accord`` package on the master node of the AE cluster.
 
 ### Setup conda environment and install accord
+
+Download and install Miniconda3
 ```sh
-# Get miniconda and install it
-curl -O https://repo.anaconda.com/miniconda/Miniconda2-4.6.14-Linux-x86_64.sh
-bash Miniconda2-4.6.14-Linux-x86_64.sh  # Accept the license and take the defaults
+# Get miniconda3 and install it
+curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh  # Accept the license and take the defaults
 
 # Source bashrc to pick up conda paths
 source ~/.bashrc
+```
 
+Create and activate conda environment
+```sh
 # Create profile, and install package
-conda create -n python37 python=3.7 -y
-conda activate python37
+conda create -n backup python=3.7 -y
+conda activate backup
 conda install -c ae5-admin accord -y
 ```
 
