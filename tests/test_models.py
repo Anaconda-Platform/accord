@@ -531,7 +531,6 @@ class TestModels(TestCase):
             ):
                 use_archive = repo
 
-
         with tarfile.open(use_archive) as tar:
             success = False
             for f in tar.getmembers():
