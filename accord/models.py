@@ -283,6 +283,15 @@ class Accord(object):
         return
 
     def create_tar_archive(self):
+        def filter_tar(tar_file):
+            if (
+                'repos_db_backup_' in tar_file.name or
+                'ae5_backup_' in tar_file.name
+            ):
+                return None
+            else:
+                return tar_file
+
         if self.repos_only:
             archive_file = (
                 f'repos_db_backup_{time.strftime("%Y%m%d-%H%M")}.tar.gz'
@@ -297,7 +306,8 @@ class Accord(object):
         ) as tar:
             tar.add(
                 self.backup_directory,
-                arcname=os.path.basename(self.backup_directory)
+                arcname=os.path.basename(self.backup_directory),
+                filter=filter_tar
             )
 
         if not tarfile.is_tarfile(f'{self.backup_directory}/{archive_file}'):

@@ -22,7 +22,14 @@ class TestModels(TestCase):
 
     def tearDown(self):
         logging.disable(logging.NOTSET)
-        temp_files = ['restore', 'accord.log', 'test.tar.gz', 'test.txt']
+        temp_files = [
+            'restore',
+            'accord.log',
+            'test.tar.gz',
+            'test.txt',
+            'ae5_backup_TEST.tar.gz',
+            'repos_db_backup_TEST.tar.gz'
+        ]
         for tf in temp_files:
             if os.path.isfile(tf):
                 os.remove(tf)
@@ -96,6 +103,25 @@ class TestModels(TestCase):
             pass
 
         self.setup_temp_restore_file('testing_tar/test.txt')
+        with tarfile.open('ae5_backup_TEST.tar.gz', 'w:gz') as tar:
+            tar.add(
+                'testing_tar',
+                arcname=os.path.basename('testing_tar')
+            )
+        shutil.move(
+            'ae5_backup_TEST.tar.gz',
+            'testing_tar/ae5_backup_TEST.tar.gz'
+        )
+
+        with tarfile.open('repos_db_backup_TEST.tar.gz', 'w:gz') as tar:
+            tar.add(
+                'testing_tar',
+                arcname=os.path.basename('testing_tar')
+            )
+        shutil.move(
+            'repos_db_backup_TEST.tar.gz',
+            'testing_tar/repos_db_backup_TEST.tar.gz'
+        )
 
     @mock.patch('sh.Command')
     def test_init_class_backup_default(self, Command):
@@ -490,15 +516,28 @@ class TestModels(TestCase):
         test_class.create_tar_archive()
 
         temp_archive = glob.glob('testing_tar/*.tar.gz')
-        self.assertEqual(len(temp_archive), 1, 'Did not find tar archive')
-        self.assertIn(
-            'repos', temp_archive[0], 'Name of archive not repos'
-        )
+        self.assertEqual(len(temp_archive), 3, 'Did not find tar archive')
+        found_new_repo = False
+        for repo in temp_archive:
+            if 'testing_tar/repos_db_backup_20' in repo:
+                found_new_repo = True
+
+        assert found_new_repo, 'Name of archive not repos'
         with tarfile.open(temp_archive[0]) as tar:
             success = False
             for f in tar.getmembers():
                 if 'test.txt' in f.name:
                     success = True
+
+                if 'ae5_backup_TEST.tar.gz' in f.name:
+                    assert False, (
+                        'File added to tar file that should not have been'
+                    )
+
+                if 'repos_db_backup_TEST.tar.gz' in f.name:
+                    assert False, (
+                        'File added to tar file that should not have been'
+                    )
 
             assert success, 'File not found in archive'
 
@@ -513,7 +552,7 @@ class TestModels(TestCase):
         test_class.create_tar_archive()
 
         temp_archive = glob.glob('testing_tar/*.tar.gz')
-        self.assertEqual(len(temp_archive), 1, 'Did not find tar archive')
+        self.assertEqual(len(temp_archive), 3, 'Did not find tar archive')
         self.assertIn(
             'ae5_backup', temp_archive[0], 'Name of archive not repos'
         )
@@ -522,6 +561,16 @@ class TestModels(TestCase):
             for f in tar.getmembers():
                 if 'test.txt' in f.name:
                     success = True
+
+                if 'ae5_backup_TEST.tar.gz' in f.name:
+                    assert False, (
+                        'File added to tar file that should not have been'
+                    )
+
+                if 'repos_db_backup_TEST.tar.gz' in f.name:
+                    assert False, (
+                        'File added to tar file that should not have been'
+                    )
 
             assert success, 'File not found in archive'
 
