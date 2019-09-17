@@ -523,7 +523,16 @@ class TestModels(TestCase):
                 found_new_repo = True
 
         assert found_new_repo, 'Name of archive not repos'
-        with tarfile.open(temp_archive[0]) as tar:
+        use_archive = None
+        for repo in temp_archive:
+            if (
+                'ae5_backup_TEST.tar.gz' not in repo and
+                'repos_db_backup_TEST.tar.gz' not in repo
+            ):
+                use_archive = repo
+
+
+        with tarfile.open(use_archive) as tar:
             success = False
             for f in tar.getmembers():
                 if 'test.txt' in f.name:
@@ -556,7 +565,15 @@ class TestModels(TestCase):
         self.assertIn(
             'ae5_backup', temp_archive[0], 'Name of archive not repos'
         )
-        with tarfile.open(temp_archive[0]) as tar:
+        use_archive = None
+        for repo in temp_archive:
+            if (
+                'ae5_backup_TEST.tar.gz' not in repo and
+                'repos_db_backup_TEST.tar.gz' not in repo
+            ):
+                use_archive = repo
+
+        with tarfile.open(use_archive) as tar:
             success = False
             for f in tar.getmembers():
                 if 'test.txt' in f.name:
