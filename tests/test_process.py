@@ -820,11 +820,6 @@ class TestProcess(TestCase):
                 ''.encode('utf-8'),
                 ''.encode('utf-8')
             ),
-            sh.ErrorReturnCode_1(
-                'kubectl',
-                ''.encode('utf-8'),
-                ''.encode('utf-8')
-            ),
             'file replaced'
         ]
         test_class = models.Accord(
