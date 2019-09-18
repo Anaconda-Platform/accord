@@ -4,7 +4,7 @@ import logging
 
 def define_logging_facility():
     logging.basicConfig(
-        level=logging.ERROR,
+        level=logging.INFO,
         format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
         handlers=[
             logging.FileHandler(
@@ -16,4 +16,5 @@ def define_logging_facility():
             logging.StreamHandler()
         ]
     )
+    logging.getLogger('sh').setLevel(logging.ERROR)
     return logging.getLogger()

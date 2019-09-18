@@ -57,6 +57,11 @@ You can change the default backup location by passing the ``-d`` or ``--director
 
 **NOTE:** You must use the same directory for both the backup and restore operations. So, if you specify a different backup directory (e.g., ``/usr/local/backups``), you must use the same directory when performing a restore.
 
+To sync the backup between Anaconda Enterprise clusters, you will want to use the ``-s`` flag to signify that a sync will need to take place after the backup has completed. Along with the ``SYNC_USER`` and ``SYNC_NODE`` flags, the application will move the backup files automatically to the specified node using the specified user provided.
+
+```sh
+accord -a backup -s -u <SYNC_USER> -n <SYNC_NODE>
+```
 You can also add the ``--archive`` flag to the backup command, to create a .tar file of the backup directory. This will create a timestamped ``.tar.gz`` file in the ``[BACKUP_DIRECTORY]`` that includes all the backed up files and secrets.
 
 ```sh
