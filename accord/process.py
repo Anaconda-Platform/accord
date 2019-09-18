@@ -427,24 +427,26 @@ def restoring_files(process):
             continue
 
         restored = False
-        try:
-            replace_return = process.kubectl('apply', '-f', restore)
-            if 'replaced' in replace_return or 'created' in replace_return:
-                restored = True
-        except sh.ErrorReturnCode_1:
-            log.info(f'File {restore} was not able to be created or replaced')
-
-        # Commenting out for now as it is not needed as using apply
-        # if not restored and 'NotFound' in replace_return:
-        #     try:
-        #         create_return = process.kubectl('create', '-f', restore)
-        #         if 'created' in create_return:
-        #             restored = True
-        #     except sh.ErrorReturnCode_1:
-        #         log.info(f'File {restore} was not able to be created')
+        if 'anaconda-enterprise-certs.yaml' in restore:
+            # The secrets which are the SSL certs need to be replaced
+            try:
+                secret_return = process.kubectl('replace', '-f', restore)
+                if 'replaced' in secret_return:
+                    restored = True
+            except sh.ErrorReturnCode_1:
+                log.error(f'File {restore} was not able to be replaced')
+        else:
+            try:
+                replace_return = process.kubectl('apply', '-f', restore)
+                if 'replaced' in replace_return or 'created' in replace_return:
+                    restored = True
+            except sh.ErrorReturnCode_1:
+                log.error(
+                    f'File {restore} was not able to be applied'
+                )
 
         if restored:
-            log.info(f'File {restore} was succefully applied')
+            log.info(f'File {restore} was successfully applied')
 
 
 def restore_repo_db(process):

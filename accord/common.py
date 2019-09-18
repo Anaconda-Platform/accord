@@ -4,7 +4,7 @@ import logging
 
 def define_logging_facility():
     logging.basicConfig(
-        level=logging.ERROR,
+        level=logging.INFO,
         format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
         handlers=[
             logging.FileHandler(
