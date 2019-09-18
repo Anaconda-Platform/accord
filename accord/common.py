@@ -16,4 +16,5 @@ def define_logging_facility():
             logging.StreamHandler()
         ]
     )
+    logging.getLogger('sh').setLevel(logging.ERROR)
     return logging.getLogger()
