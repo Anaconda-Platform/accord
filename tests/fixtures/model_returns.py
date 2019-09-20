@@ -67,3 +67,11 @@ GET_SECRETS = [
     'default-token-ghz4l                                            '
     'kubernetes.io/service-account-token   3         1h'
 ]
+
+
+GET_INGRESS = (
+    'anaconda-enterprise-ingress-master\n'
+    'anaconda-enterprise-ingress-minion\n'
+    'anaconda-enterprise-ingress-minion-intercept-errors\n'
+    'weave-ingress\n'
+)

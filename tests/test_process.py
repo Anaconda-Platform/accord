@@ -40,11 +40,19 @@ class TestProcess(TestCase):
         if os.path.exists('secrets'):
             os.rmdir('secrets')
 
+        temp_ingress = ['ingress/test-master.yaml']
+        for ts in temp_ingress:
+            if os.path.isfile(ts):
+                os.remove(ts)
+
+        if os.path.exists('ingress'):
+            os.rmdir('ingress')
+
     def setup_args_backup_default(self, repos_only=False, sync=False,
                                   sync_node=None, sync_user='root',
                                   start_deployments=False,
                                   directory='/opt/anaconda_backup',
-                                  archive=False):
+                                  archive=False, ingress=False):
         class MockArgs(object):
             def __init__(self):
                 self.action = 'backup'
@@ -57,13 +65,14 @@ class TestProcess(TestCase):
                 self.sync = sync
                 self.sync_node = sync_node
                 self.sync_user = sync_user
+                self.ingress = ingress
 
         return MockArgs()
 
     def setup_args_restore_default(self, override=False, repos_only=False,
                                    no_config=False, start_deployments=False,
                                    directory='/opt/anaconda_backup',
-                                   restore_file=None):
+                                   restore_file=None, ingress=False):
         class MockArgs(object):
             def __init__(self):
                 self.action = 'restore'
@@ -72,7 +81,8 @@ class TestProcess(TestCase):
                 self.override = override
                 self.repos_only = repos_only
                 self.restore_file = restore_file
-                self.start_deployments = start_deployments
+                self.start_deployments = start_deployments,
+                self.ingress = ingress
 
         return MockArgs()
 
@@ -90,6 +100,15 @@ class TestProcess(TestCase):
 
         with open('secrets/test-cm.yaml', 'w') as f:
             for line in process_returns.CM_BACKUP_FILE:
+                f.write(f'{line}\n')
+
+    def setup_ingress(self):
+        if not os.path.exists('ingress'):
+            pathlib.Path('ingress').mkdir(parents=True)
+
+        # Write things to temp files
+        with open('ingress/test-master.yaml', 'w') as f:
+            for line in process_returns.MASTER_INGRESS:
                 f.write(f'{line}\n')
 
     # Test main()
@@ -110,12 +129,17 @@ class TestProcess(TestCase):
                             'accord.process.backup_secrets_config_maps'
                         ):
                             with mock.patch(
-                                'accord.process.sanitize_secrets_config_maps'
+                                'accord.process.backup_ingress_definitions'
                             ):
                                 with mock.patch(
-                                    'accord.models.Accord.create_tar_archive'
+                                    'accord.process.sanitize_'
+                                    'secrets_config_maps'
                                 ):
-                                    process.main()
+                                    with mock.patch(
+                                        'accord.models.Accord.'
+                                        'create_tar_archive'
+                                    ):
+                                        process.main()
 
         if not os.path.isfile('restore'):
             assert False, 'restore file was not added'
@@ -184,6 +208,42 @@ class TestProcess(TestCase):
                                         'accord.process.restart_pods'
                                     ):
                                         process.main()
+
+        if os.path.isfile('restore'):
+            assert False, 'restore file was not cleaned up'
+
+    @mock.patch('sh.Command')
+    def test_main_restore_with_ingress(self, Command):
+        self.setup_temp_file('restore')
+        with mock.patch(
+            'accord.process.argparse.ArgumentParser.parse_args'
+        ) as args:
+            args.return_value = self.setup_args_restore_default(
+                ingress=True,
+                directory=''
+            )
+            with mock.patch('accord.process.cleanup_sessions_deployments'):
+                with mock.patch('accord.process.scale_postgres_pod'):
+                    with mock.patch(
+                        'accord.process.cleanup_and_restore_files'
+                    ):
+                        with mock.patch(
+                            'accord.process.restoring_ingress'
+                        ):
+                            with mock.patch(
+                                'accord.process.scale_postgres_pod'
+                            ):
+                                with mock.patch(
+                                    'accord.process.restore_postgres_database'
+                                ):
+                                    with mock.patch(
+                                        'accord.process.'
+                                        'cleanup_postgres_database'
+                                    ):
+                                        with mock.patch(
+                                            'accord.process.restart_pods'
+                                        ):
+                                            process.main()
 
         if os.path.isfile('restore'):
             assert False, 'restore file was not cleaned up'
@@ -547,6 +607,66 @@ class TestProcess(TestCase):
         if not os.path.exists('secrets/test-cm.yaml'):
             assert False, 'Did not create the secret'
 
+    # Backup ingress
+    @mock.patch('sh.Command')
+    def test_backup_ingress_failure(self, Command):
+        test_class = None
+        with mock.patch('accord.models.Accord.setup_backup_directory'):
+            with mock.patch('accord.models.Accord.remove_signal_restore_file'):
+                with mock.patch('accord.models.Accord.test_sync_to_backup'):
+                    test_class = models.Accord(
+                        self.setup_args_backup_default()
+                    )
+
+        test_class.backup_directory = '.'
+
+        Command().side_effect = sh.ErrorReturnCode_1(
+            'kubectl',
+            ''.encode('utf-8'),
+            ''.encode('utf-8')
+        )
+        with mock.patch('accord.models.Accord.get_all_ingress') as ingress:
+            ingress.return_value = ['test-master', '']
+            try:
+                process.backup_ingress_definitions(test_class)
+                assert False, 'An error was not generated when it should have'
+            except exceptions.IngressError:
+                pass
+
+        if not os.path.exists('ingress'):
+            assert False, 'Did not automatically create the directory'
+
+        if os.path.exists('ingress/test-master.yaml'):
+            assert False, 'Created the ingress backup when it should not have'
+
+    @mock.patch('sh.Command')
+    def test_backup_ingress_success(self, Command):
+        test_class = None
+        with mock.patch('accord.models.Accord.setup_backup_directory'):
+            with mock.patch('accord.models.Accord.remove_signal_restore_file'):
+                with mock.patch('accord.models.Accord.test_sync_to_backup'):
+                    test_class = models.Accord(
+                        self.setup_args_backup_default()
+                    )
+
+        test_class.backup_directory = '.'
+
+        Command().side_effect = process_returns.MASTER_INGRESS
+        with mock.patch('accord.models.Accord.get_all_ingress') as ingress:
+            ingress.return_value = ['test-master', '', '\n']
+            try:
+                process.backup_ingress_definitions(test_class)
+            except Exception:
+                assert False, (
+                    'An exception was generated when it should not have'
+                )
+
+        if not os.path.exists('ingress'):
+            assert False, 'Did not automatically create the directory'
+
+        if not os.path.exists('ingress/test-master.yaml'):
+            assert False, 'Did not create the ingress backup'
+
     # Sanitize
     @mock.patch('sh.Command')
     def test_sanitize_secret_cm(self, Command):
@@ -563,7 +683,7 @@ class TestProcess(TestCase):
         test_class.config_maps = {'default': ['test-cm']}
 
         self.setup_secrets()
-
+        self.setup_ingress()
         with mock.patch('accord.models.Accord.get_all_secrets'):
             process.sanitize_secrets_config_maps(test_class)
 
@@ -591,7 +711,7 @@ class TestProcess(TestCase):
         secret_diff = []
         with open('secrets/test-secret.yaml', 'r') as results:
             for line in results:
-                if line not in process_returns.SECRECT_EXPECTED:
+                if line not in process_returns.SECRET_EXPECTED:
                     secret_diff.append(line)
 
         self.assertEqual(
@@ -798,7 +918,9 @@ class TestProcess(TestCase):
                     'anaconda-enterprise-anaconda-platform.yml',
                     'first.yaml',
                     'second.yaml',
-                    'third.yaml'
+                    'third.yaml',
+                    'anaconda-enterprise-certs.yaml',
+                    'anaconda-enterprise-certs.yaml'
                 ]
 
             def __iter__(self):
@@ -806,7 +928,7 @@ class TestProcess(TestCase):
 
             def __next__(self):
                 index = self.index
-                if index > 3:
+                if index > 5:
                     raise StopIteration()
 
                 self.index += 1
@@ -820,7 +942,12 @@ class TestProcess(TestCase):
                 ''.encode('utf-8'),
                 ''.encode('utf-8')
             ),
-            'file replaced'
+            'file replaced',
+            sh.ErrorReturnCode_1(
+                'kubectl',
+                ''.encode('utf-8'),
+                ''.encode('utf-8')
+            ),
         ]
         test_class = models.Accord(
             self.setup_args_restore_default(override=True, no_config=True)
@@ -839,3 +966,44 @@ class TestProcess(TestCase):
         with mock.patch('accord.models.Accord.get_postgres_docker_container'):
             with mock.patch('accord.models.Accord.run_command_on_container'):
                 process.restore_repo_db(test_class)
+
+    # Restore ingress files
+    @mock.patch('sh.Command')
+    def test_restore_ingress(self, Command):
+        class temp_glob:
+            def __init__(self, path):
+                self.path = path
+                self.index = 0
+                self.paths = [
+                    'master_ingress.yaml',
+                    'failure.yaml'
+                ]
+
+            def __iter__(self):
+                return self
+
+            def __next__(self):
+                index = self.index
+                if index > 1:
+                    raise StopIteration()
+
+                self.index += 1
+                return self.paths[index]
+
+        Command().side_effect = [
+            'configured ingress',
+            sh.ErrorReturnCode_1(
+                'kubectl',
+                ''.encode('utf-8'),
+                ''.encode('utf-8')
+            )
+        ]
+        test_class = models.Accord(
+            self.setup_args_restore_default(
+                override=True,
+                no_config=True,
+                ingress=True
+            )
+        )
+        with mock.patch('accord.process.glob.glob', side_effect=temp_glob):
+            process.restoring_ingress(test_class)

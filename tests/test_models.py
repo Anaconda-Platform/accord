@@ -46,7 +46,7 @@ class TestModels(TestCase):
                                   sync_node=None, sync_user='root',
                                   start_deployments=False,
                                   directory='/opt/anaconda_backup',
-                                  archive=False):
+                                  archive=False, ingress=False):
         class MockArgs(object):
             def __init__(self):
                 self.action = 'backup'
@@ -59,13 +59,14 @@ class TestModels(TestCase):
                 self.sync = sync
                 self.sync_node = sync_node
                 self.sync_user = sync_user
+                self.ingress = ingress
 
         return MockArgs()
 
     def setup_args_restore_default(self, override=False, repos_only=False,
                                    no_config=False, start_deployments=False,
                                    directory='/opt/anaconda_backup',
-                                   restore_file=None):
+                                   restore_file=None, ingress=False):
         class MockArgs(object):
             def __init__(self):
                 self.action = 'restore'
@@ -75,6 +76,7 @@ class TestModels(TestCase):
                 self.repos_only = repos_only
                 self.restore_file = restore_file
                 self.start_deployments = start_deployments
+                self.ingress = ingress
 
         return MockArgs()
 
@@ -645,3 +647,16 @@ class TestModels(TestCase):
             pass
         except Exception:
             assert False, 'Exception was not caught'
+
+    @mock.patch('sh.awk')
+    @mock.patch('sh.grep')
+    @mock.patch('sh.Command')
+    def test_get_all_ingress(self, awk, grep, Command):
+        with mock.patch('accord.models.Accord.setup_backup_directory'):
+            with mock.patch('accord.models.Accord.remove_signal_restore_file'):
+                test_class = models.Accord(self.setup_args_backup_default())
+
+        Command.return_value = model_returns.GET_INGRESS
+        ingress_list = test_class.get_all_ingress()
+
+        self.assertEqual(len(ingress_list), 5, 'Incorrect length of ingress')
