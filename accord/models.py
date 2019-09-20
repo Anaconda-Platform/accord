@@ -136,6 +136,7 @@ class Accord(object):
         self.to_start = []
 
         self.no_config = args.no_config
+        self.ingress = args.ingress
 
         self.namespace = 'default'
         self.postgres_pod = None
@@ -246,6 +247,16 @@ class Accord(object):
             if 'anaconda-credentials-user' in line:
                 temp = (re.sub(r'\s+', ' ', line)).split(' ')
                 self.secret_files[self.namespace].append(temp[0])
+
+    def get_all_ingress(self):
+        all_ingress = sh.awk(
+            sh.grep(
+                self.kubectl('get', 'ingress', '-n', self.namespace),
+                'ingress'
+            ),
+            '{print $1}'
+        )
+        return all_ingress.split('\n')
 
     def run_command_on_container(self, container, command, return_value=False):
         try:
