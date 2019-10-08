@@ -130,7 +130,10 @@ class Accord(object):
             self.setup_backup_directory()
             self.remove_signal_restore_file()
 
-        self.start_deployments = args.start_deployments
+        # Always setting this to False since the option is not implemented
+        # self.start_deployments = args.start_deployments
+        self.start_deployments = False
+
         self.start_username = None
         self.start_password = None
         self.to_start = []
