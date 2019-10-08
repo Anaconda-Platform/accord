@@ -70,8 +70,11 @@ GET_SECRETS = [
 
 
 GET_INGRESS = (
+    'anaconda-app-ingress-12e9d1c6ac5148a59a27a13e0ab6ff6d\n'
     'anaconda-enterprise-ingress-master\n'
     'anaconda-enterprise-ingress-minion\n'
     'anaconda-enterprise-ingress-minion-intercept-errors\n'
-    'weave-ingress\n'
+    'anaconda-session-ingress-25a75b1a4d394ddeb865578fdfa2b996\n'
+    'anaconda-session-ingress-312d73f825c845fcb12fd62dcf3894e7\n'
+    'weave-ingress\n\n'
 )

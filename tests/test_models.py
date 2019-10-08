@@ -652,6 +652,12 @@ class TestModels(TestCase):
     @mock.patch('sh.grep')
     @mock.patch('sh.Command')
     def test_get_all_ingress(self, awk, grep, Command):
+        expected_return = [
+            'anaconda-enterprise-ingress-master',
+            'anaconda-enterprise-ingress-minion',
+            'anaconda-enterprise-ingress-minion-intercept-errors',
+            'weave-ingress'
+        ]
         with mock.patch('accord.models.Accord.setup_backup_directory'):
             with mock.patch('accord.models.Accord.remove_signal_restore_file'):
                 test_class = models.Accord(self.setup_args_backup_default())
@@ -659,4 +665,9 @@ class TestModels(TestCase):
         Command.return_value = model_returns.GET_INGRESS
         ingress_list = test_class.get_all_ingress()
 
-        self.assertEqual(len(ingress_list), 5, 'Incorrect length of ingress')
+        self.assertEqual(len(ingress_list), 4, 'Incorrect length of ingress')
+        self.assertEqual(
+            ingress_list,
+            expected_return,
+            'Ingress was list was not expected value'
+        )

@@ -249,6 +249,7 @@ class Accord(object):
                 self.secret_files[self.namespace].append(temp[0])
 
     def get_all_ingress(self):
+        backup_ingress = []
         all_ingress = sh.awk(
             sh.grep(
                 self.kubectl('get', 'ingress', '-n', self.namespace),
@@ -256,7 +257,15 @@ class Accord(object):
             ),
             '{print $1}'
         )
-        return all_ingress.split('\n')
+        for ingress in all_ingress.split('\n'):
+            if not (
+                'anaconda-session-ingress-' in ingress or
+                'anaconda-app-ingress-' in ingress or
+                ingress == ''
+            ):
+                backup_ingress.append(ingress)
+
+        return backup_ingress
 
     def run_command_on_container(self, container, command, return_value=False):
         try:
