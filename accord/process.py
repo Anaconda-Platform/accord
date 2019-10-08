@@ -652,16 +652,16 @@ def handle_arguments():
             'Default is False'
         )
     )
-    restore_group.add_argument(
-        '--start-deployments',
-        required=False,
-        default=False,
-        action='store_true',
-        help=(
-            'Not Implemented: Start up deployments that are running on '
-            'the restore destination'
-        )
-    )
+    # restore_group.add_argument(
+    #     '--start-deployments',
+    #     required=False,
+    #     default=False,
+    #     action='store_true',
+    #     help=(
+    #         'Not Implemented: Start up deployments that are running on '
+    #         'the restore destination'
+    #     )
+    # )
     restore_group.add_argument(
         '--restore-file',
         required=False,
