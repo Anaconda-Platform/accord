@@ -28,3 +28,7 @@ class SecretNotFound(Exception):
 
 class NotValidTarfile(Exception):
     pass
+
+
+class IngressError(Exception):
+    pass

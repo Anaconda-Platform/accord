@@ -173,10 +173,37 @@ def backup_secrets_config_maps(process):
     return
 
 
+def backup_ingress_definitions(process):
+    ingress_path = f'{process.backup_directory}/ingress'
+    if not os.path.exists(ingress_path):
+        pathlib.Path(ingress_path).mkdir(parents=True)
+
+    all_ingress = process.get_all_ingress()
+    for ingress in all_ingress:
+        if ingress not in ['', '\n']:
+            temp_ingress_path = f'{ingress_path}/{ingress}.yaml'
+            try:
+                with open(temp_ingress_path, 'w') as fing:
+                    process.kubectl(
+                        'get',
+                        'ingress',
+                        ingress,
+                        '-o',
+                        'yaml',
+                        _out=fing
+                    )
+            except sh.ErrorReturnCode_1:
+                if os.path.isfile(temp_ingress_path):
+                    os.remove(temp_ingress_path)
+                log.error(f'Could not backup {ingress}')
+                raise exceptions.IngressError(f'{ingress} cannot be backed up')
+
+
 def sanitize_secrets_config_maps(process):
     metadata_to_clear = [
         "creationTimestamp",
         "resourceVersion",
+        "generation",
         "selfLink",
         "uid"
     ]
@@ -187,7 +214,11 @@ def sanitize_secrets_config_maps(process):
                 data = yaml.load(f, Loader=yaml.FullLoader)
 
             for label in metadata_to_clear:
-                del data['metadata'][label]
+                try:
+                    del data['metadata'][label]
+                except Exception:
+                    # Means the key is not there which is ok if it is not
+                    pass
 
             with open(temp_secret, 'w') as f:
                 yaml.dump(data, f, default_flow_style=False)
@@ -199,10 +230,25 @@ def sanitize_secrets_config_maps(process):
                 data = yaml.load(f, Loader=yaml.FullLoader)
 
             for label in metadata_to_clear:
-                del data['metadata'][label]
+                try:
+                    del data['metadata'][label]
+                except Exception:
+                    # Means the key is not there which is ok if it is not
+                    pass
 
             with open(temp_cm, 'w') as f:
                 yaml.dump(data, f, default_flow_style=False)
+
+    ingress_files = glob.glob(f'{process.backup_directory}/ingress/*.yaml')
+    for ingress in ingress_files:
+        with open(ingress, 'r') as f:
+            data = yaml.load(f, Loader=yaml.FullLoader)
+
+        for label in metadata_to_clear:
+            del data['metadata'][label]
+
+        with open(ingress, 'w') as f:
+            yaml.dump(data, f, default_flow_style=False)
 
 
 def sync_files(process):
@@ -397,7 +443,7 @@ def cleanup_postgres_database(process):
     )
     rows = return_select.decode('utf-8').split('\n')
     for row in rows:
-        if row != '':
+        if row not in ['', None] and 'FATAL' not in row:
             temp_row = json.loads(row)
             if temp_row.get('status_text', None) == 'Started':
                 process.to_start.append(temp_row)
@@ -447,6 +493,29 @@ def restoring_files(process):
 
         if restored:
             log.info(f'File {restore} was successfully applied')
+
+
+def restoring_ingress(process):
+    # Grab all of the yaml files that were backed up and apply them
+    # within the restore cluster
+    if not process.ingress:
+        log.info('Skipping ingress restore')
+        return
+
+    ingress_files = glob.glob(f'{process.backup_directory}/ingress/*.yaml')
+    for ingress in ingress_files:
+        applied = False
+        try:
+            replace_return = process.kubectl('apply', '-f', ingress)
+            if 'configured' in replace_return:
+                applied = True
+        except sh.ErrorReturnCode_1:
+            log.error(
+                f'File {ingress} was not able to be applied'
+            )
+
+        if applied:
+            log.info(f'File {ingress} was successfully applied')
 
 
 def restore_repo_db(process):
@@ -574,15 +643,25 @@ def handle_arguments():
         help='Do not restore the config files to the system. Default is False'
     )
     restore_group.add_argument(
-        '--start-deployments',
+        '--ingress',
         required=False,
         default=False,
         action='store_true',
         help=(
-            'Not Implemented: Start up deployments that are running on '
-            'the restore destination'
+            'Restore the ingress configurations from the backup. '
+            'Default is False'
         )
     )
+    # restore_group.add_argument(
+    #     '--start-deployments',
+    #     required=False,
+    #     default=False,
+    #     action='store_true',
+    #     help=(
+    #         'Not Implemented: Start up deployments that are running on '
+    #         'the restore destination'
+    #     )
+    # )
     restore_group.add_argument(
         '--restore-file',
         required=False,
@@ -625,8 +704,12 @@ def main():
             log.info('Backing up all secrets')
             backup_secrets_config_maps(process)
 
+            # Backup the ingress definiton
+            log.info('Backing up all ingress definitions')
+            backup_ingress_definitions(process)
+
             # Clean all of the secrets
-            log.info('Sanitizing secrets')
+            log.info('Sanitizing yaml files')
             sanitize_secrets_config_maps(process)
 
         # Drop in signal file to indicate good to restore
@@ -689,6 +772,7 @@ def main():
             # Restore secrets/configmaps for cluster
             log.info('Restoring files')
             restoring_files(process)
+            restoring_ingress(process)
 
             # Restart the pods
             log.info('Restarting all pods')

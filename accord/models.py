@@ -130,12 +130,16 @@ class Accord(object):
             self.setup_backup_directory()
             self.remove_signal_restore_file()
 
-        self.start_deployments = args.start_deployments
+        # Always setting this to False since the option is not implemented
+        # self.start_deployments = args.start_deployments
+        self.start_deployments = False
+
         self.start_username = None
         self.start_password = None
         self.to_start = []
 
         self.no_config = args.no_config
+        self.ingress = args.ingress
 
         self.namespace = 'default'
         self.postgres_pod = None
@@ -246,6 +250,25 @@ class Accord(object):
             if 'anaconda-credentials-user' in line:
                 temp = (re.sub(r'\s+', ' ', line)).split(' ')
                 self.secret_files[self.namespace].append(temp[0])
+
+    def get_all_ingress(self):
+        backup_ingress = []
+        all_ingress = sh.awk(
+            sh.grep(
+                self.kubectl('get', 'ingress', '-n', self.namespace),
+                'ingress'
+            ),
+            '{print $1}'
+        )
+        for ingress in all_ingress.split('\n'):
+            if not (
+                'anaconda-session-ingress-' in ingress or
+                'anaconda-app-ingress-' in ingress or
+                ingress == ''
+            ):
+                backup_ingress.append(ingress)
+
+        return backup_ingress
 
     def run_command_on_container(self, container, command, return_value=False):
         try:

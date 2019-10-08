@@ -90,7 +90,7 @@ CM_EXPECTED = [
 ]
 
 
-SECRECT_EXPECTED = [
+SECRET_EXPECTED = [
     'apiVersion: v1\n',
     'data:\n',
     '  testing: dGVzdGluZw==\n',
@@ -101,4 +101,75 @@ SECRECT_EXPECTED = [
     '  name: anaconda-credentials-user-creds-anaconda-enterprise-3ggji6dp\n',
     '  namespace: default\n',
     'type: Opaque\n'
+]
+
+MASTER_INGRESS = [
+    'apiVersion: extensions/v1beta1\n'
+    'kind: Ingress\n'
+    'metadata:\n'
+    '  annotations:\n'
+    '    kubernetes.io/ingress.class: nginx\n'
+    '    nginx.org/listen-ports-ssl: "443"\n'
+    '    nginx.org/location-snippets: |\n'
+    '      add_header Cache-Control "no-cache, no-store, must-revalidate";\n'
+    '      add_header Pragma "no-cache";\n'
+    '      add_header X-Frame-Options "SAMEORIGIN";\n'
+    '    nginx.org/mergeable-ingress-type: master\n'
+    '    nginx.org/server-snippets: |\n'
+    '      error_page 404 /_errors/404.html;\n'
+    '      error_page 502 /_errors/502.html;\n'
+    '      location ^~ /_errors/ {\n'
+    '          root /var/www/;\n'
+    '      }\n'
+    '  creationTimestamp: 2019-09-20T11:43:21Z\n'
+    '  generation: 1\n'
+    '  name: anaconda-enterprise-ingress-master\n'
+    '  namespace: default\n'
+    '  resourceVersion: "2186"\n'
+    '  selfLink: /apis/extensions/v1beta1/namespaces/default/'
+    'ingresses/anaconda-enterprise-ingress-master\n'
+    '  uid: d90aff36-db9b-11e9-9079-12bc13f9aea2\n'
+    'spec:\n'
+    '  rules:\n'
+    '  - host: example.anaconda.com\n'
+    '  tls:\n'
+    '  - hosts:\n'
+    '    - example.anaconda.com\n'
+    '    secretName: anaconda-enterprise-certs\n'
+    'status:\n'
+    '  loadBalancer: {}\n'
+]
+
+
+MASTER_EXPECTED = [
+    'apiVersion: extensions/v1beta1\n'
+    'kind: Ingress\n'
+    'metadata:\n'
+    '  annotations:\n'
+    '    kubernetes.io/ingress.class: nginx\n'
+    '    nginx.org/listen-ports-ssl: "443"\n'
+    '    nginx.org/location-snippets: |\n'
+    '      add_header Cache-Control "no-cache, no-store, must-revalidate";\n'
+    '      add_header Pragma "no-cache";\n'
+    '      add_header X-Frame-Options "SAMEORIGIN";\n'
+    '    nginx.org/mergeable-ingress-type: master\n'
+    '    nginx.org/server-snippets: |\n'
+    '      error_page 404 /_errors/404.html;\n'
+    '      error_page 502 /_errors/502.html;\n'
+    '      location ^~ /_errors/ {\n'
+    '          root /var/www/;\n'
+    '      }\n'
+    '  name: anaconda-enterprise-ingress-master\n'
+    '  namespace: default\n'
+    'ingresses/anaconda-enterprise-ingress-master\n'
+    '  uid: d90aff36-db9b-11e9-9079-12bc13f9aea2\n'
+    'spec:\n'
+    '  rules:\n'
+    '  - host: example.anaconda.com\n'
+    '  tls:\n'
+    '  - hosts:\n'
+    '    - example.anaconda.com\n'
+    '    secretName: anaconda-enterprise-certs\n'
+    'status:\n'
+    '  loadBalancer: {}\n'
 ]
