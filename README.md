@@ -51,6 +51,7 @@ All files being backed up are placed in the ``/opt/anaconda_backup`` directory b
 - A dump of the Postgres database
 - All Gravity-related files
 - All secrets and config files used in the system (stored in ``[BACKUP_DIRECTORY]/secrets``)
+- Ingress definitions that defines the domain (stored in ``[BACKUP_DIRECTORY]/ingress``)
 - The object store, which includes all project data
 
 You can change the default backup location by passing the ``-d`` or ``--directory`` option to the command, followed by the desired path.
@@ -93,7 +94,7 @@ accord -a restore
 
 If you specified an alternate directory to store the backup files, specify the location to restore the files from using the ``-d`` or ``--directory`` option, followed by the path to the directory that was specified during the backup operation.
 
-If you chose to backup only the mirrored repositories, pass the a ``--repos-only`` option to the restore command:
+If you chose to backup only the mirrored repositories, pass the ``--repos-only`` option to the restore command:
 
 ```sh
 accord -a restore --repos-only
@@ -111,6 +112,12 @@ If you want to restore again from the same backup files, and the 0 byte ``restor
 
 ```sh
 accord -a restore --override
+```
+
+If you would like to restore the ingress definitions from the backup, pass the ``--ingress`` option to the restore command:
+
+```sh
+accord -a restore --ingress
 ```
 
 You can also restore from a ``.tar.gz`` backup file created by using the ``--archive`` flag, to specify a backup other than the latest backup. If you specified a non-default location when you created the backup, you'll need to specify that same location for the restore.
