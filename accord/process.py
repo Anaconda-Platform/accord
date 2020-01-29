@@ -476,7 +476,9 @@ def restoring_files(process):
                 log.error(f'File {restore} was not able to be replaced')
         elif 'anaconda-enterprise-anaconda-platform.yml.yaml' in restore:
             try:
-                replace_return = process.kubectl('apply', '-f', restore,
+                # delete existing CM; the create new from backup
+                process.kubectl('delete', 'cm', 'anaconda-enterprise-anaconda-platform.yml')
+                replace_return = process.kubectl('create', '-f', restore,
                                                  '--validate=false')
                 if 'replaced' in replace_return or 'created' in replace_return:
                     restored = True
