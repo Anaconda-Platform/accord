@@ -200,55 +200,47 @@ def backup_ingress_definitions(process):
 
 
 def sanitize_secrets_config_maps(process):
+
+    def _remove_fields(temp_yaml, metadata_to_clear):
+        """
+        For now just create function for repetitive code that's only used here
+        """
+        with open(temp_yaml, 'r') as f:
+            data = yaml.load(f, Loader=yaml.FullLoader)
+
+        for label in metadata_to_clear:
+            try:
+                del data['metadata'][label]
+            except Exception:
+                # Means the key is not there which is ok if it is not
+                pass
+
+        with open(temp_yaml, 'w') as f:
+            yaml.dump(data, f, default_flow_style=False)
+
+    # back to original function
+    # f:type in managedFields is causing validation failure; for now just remove section
     metadata_to_clear = [
         "creationTimestamp",
         "resourceVersion",
         "generation",
         "selfLink",
-        "uid"
-    ]
+        "uid",
+        "managedFields"]
+
     for namespace, secrets in process.secret_files.items():
         for secret in secrets:
             temp_secret = f'{process.backup_directory}/secrets/{secret}.yaml'
-            with open(temp_secret, 'r') as f:
-                data = yaml.load(f, Loader=yaml.FullLoader)
-
-            for label in metadata_to_clear:
-                try:
-                    del data['metadata'][label]
-                except Exception:
-                    # Means the key is not there which is ok if it is not
-                    pass
-
-            with open(temp_secret, 'w') as f:
-                yaml.dump(data, f, default_flow_style=False)
-
+            _remove_fields(temp_secret, metadata_to_clear)
+            
     for namespace, config_maps in process.config_maps.items():
         for cm in config_maps:
             temp_cm = f'{process.backup_directory}/secrets/{cm}.yaml'
-            with open(temp_cm, 'r') as f:
-                data = yaml.load(f, Loader=yaml.FullLoader)
-
-            for label in metadata_to_clear:
-                try:
-                    del data['metadata'][label]
-                except Exception:
-                    # Means the key is not there which is ok if it is not
-                    pass
-
-            with open(temp_cm, 'w') as f:
-                yaml.dump(data, f, default_flow_style=False)
-
+            _remove_fields(temp_secret, metadata_to_clear)
+           
     ingress_files = glob.glob(f'{process.backup_directory}/ingress/*.yaml')
     for ingress in ingress_files:
-        with open(ingress, 'r') as f:
-            data = yaml.load(f, Loader=yaml.FullLoader)
-
-        for label in metadata_to_clear:
-            del data['metadata'][label]
-
-        with open(ingress, 'w') as f:
-            yaml.dump(data, f, default_flow_style=False)
+        _remove_fields(ingress, metadata_to_clear)
 
 
 def sync_files(process):
