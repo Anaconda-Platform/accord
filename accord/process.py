@@ -215,6 +215,7 @@ def sanitize_secrets_config_maps(process):
                 # Means the key is not there which is ok if it is not
                 pass
 
+
         with open(temp_yaml, 'w') as f:
             yaml.dump(data, f, default_flow_style=False)
 
@@ -473,6 +474,17 @@ def restoring_files(process):
                     restored = True
             except sh.ErrorReturnCode_1:
                 log.error(f'File {restore} was not able to be replaced')
+        elif 'anaconda-enterprise-anaconda-platform.yml.yaml' in restore:
+            try:
+                replace_return = process.kubectl('apply', '-f', restore,
+                                                 '--validate=false')
+                if 'replaced' in replace_return or 'created' in replace_return:
+                    restored = True
+            except sh.ErrorReturnCode_1:
+                log.error(
+                    f'File {restore} was not able to be applied'
+                )
+
         else:
             try:
                 replace_return = process.kubectl('apply', '-f', restore)
