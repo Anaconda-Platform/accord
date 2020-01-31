@@ -1,12 +1,14 @@
 # Conda build file for package accord
 # To build: conda build accord
 
+{% set data = load_setup_py_data() %}
+
 package:
   name: accord
-  version: '0.1.7'
+  version: {{ data.get('version') }}
 
 source:
-  path: .
+  path: ..
 
 build:
   number: 0

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import setuptools
+import accord
 
 
 requirements = ['sh', 'pyyaml']
@@ -9,7 +10,7 @@ test_requirements = ['mock', 'flake8', 'nose']
 
 setuptools.setup(
     name='accord',
-    version='0.1.7',
+    version=accord.__version__,
     url='https://github.com/oldarmyc/accord',
     license='Apache License, Version 2.0',
     author='Dave Kludt',
