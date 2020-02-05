@@ -466,15 +466,7 @@ def restoring_files(process):
             continue
 
         restored = False
-        if 'anaconda-enterprise-certs.yaml' in restore:
-            # The secrets which are the SSL certs need to be replaced
-            try:
-                secret_return = process.kubectl('replace', '-f', restore)
-                if 'replaced' in secret_return:
-                    restored = True
-            except sh.ErrorReturnCode_1:
-                log.error(f'File {restore} was not able to be replaced')
-        elif 'anaconda-enterprise-anaconda-platform.yml.yaml' in restore:
+        if 'anaconda-enterprise-anaconda-platform.yml.yaml' in restore:
             try:
                 # delete existing CM; the create new from backup
                 process.kubectl('delete', 'cm', 'anaconda-enterprise-anaconda-platform.yml')
@@ -488,15 +480,16 @@ def restoring_files(process):
                 )
 
         else:
+            # replace or create secrets
             try:
-                replace_return = process.kubectl('apply', '-f', restore)
+                replace_return = process.kubectl('replace', '-f', restore)
                 if 'replaced' in replace_return or 'created' in replace_return:
                     restored = True
             except sh.ErrorReturnCode_1:
                 log.error(
                     f'File {restore} was not able to be applied'
                 )
-
+        log.info(f'{replace_return}')
         if restored:
             log.info(f'File {restore} was successfully applied')
 

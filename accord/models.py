@@ -247,7 +247,7 @@ class Accord(object):
             self.namespace
         )
         for line in temp_secrets:
-            if 'anaconda-credentials-user' in line:
+            if 'anaconda-credentials-' in line:
                 temp = (re.sub(r'\s+', ' ', line)).split(' ')
                 self.secret_files[self.namespace].append(temp[0])
 
