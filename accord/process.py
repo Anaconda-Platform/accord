@@ -237,7 +237,7 @@ def sanitize_secrets_config_maps(process):
     for namespace, config_maps in process.config_maps.items():
         for cm in config_maps:
             temp_cm = f'{process.backup_directory}/secrets/{cm}.yaml'
-            _remove_fields(temp_secret, metadata_to_clear)
+            _remove_fields(temp_cm, metadata_to_clear)
            
     ingress_files = glob.glob(f'{process.backup_directory}/ingress/*.yaml')
     for ingress in ingress_files:
