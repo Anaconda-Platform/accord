@@ -456,6 +456,13 @@ def cleanup_postgres_database(process):
 def restoring_files(process):
     # Grab all of the yaml files that were backed up and replace/create them
     # within the restore cluster
+
+    def restore_resource(restore_file, action='replace'):
+        # replace or create a resource
+        replace_return = process.kubectl(action, '-f', restore_file)
+        log.info(f'{action} resource {restore_file}')
+        log.info(f'Command returned: {replace_return}')
+
     restore_files = glob.glob(f'{process.backup_directory}/secrets/*.yaml')
     for restore in restore_files:
         if (
@@ -465,33 +472,15 @@ def restoring_files(process):
             log.info('Skipping platform config due to passed in option')
             continue
 
-        restored = False
-        if 'anaconda-enterprise-anaconda-platform.yml.yaml' in restore:
+        try:
+            restore_resource(restore)
+        except sh.ErrorReturnCode_1:
+            log.info(f'Failed to replace {restore}')
             try:
-                # delete existing CM; the create new from backup
-                process.kubectl('delete', 'cm', 'anaconda-enterprise-anaconda-platform.yml')
-                replace_return = process.kubectl('create', '-f', restore,
-                                                 '--validate=false')
-                if 'replaced' in replace_return or 'created' in replace_return:
-                    restored = True
+                restore_resource(restore, action='create')
             except sh.ErrorReturnCode_1:
-                log.error(
-                    f'File {restore} was not able to be applied'
-                )
-
-        else:
-            # replace or create secrets
-            try:
-                replace_return = process.kubectl('replace', '-f', restore)
-                if 'replaced' in replace_return or 'created' in replace_return:
-                    restored = True
-            except sh.ErrorReturnCode_1:
-                log.error(
-                    f'File {restore} was not able to be applied'
-                )
-        log.info(f'{replace_return}')
-        if restored:
-            log.info(f'File {restore} was successfully applied')
+                log.info(f'Failed to create {restore}')
+                log.error(f'Resource {restore} not restored')
 
 
 def restoring_ingress(process):
