@@ -669,7 +669,6 @@ class TestProcess(TestCase):
             assert False, 'Did not create the ingress backup'
 
     # Sanitize
-    @unittest.expectedFailure
     @mock.patch('sh.Command')
     def test_sanitize_secret_cm(self, Command):
         test_class = None
@@ -910,6 +909,7 @@ class TestProcess(TestCase):
             'Incorrect number of deployments'
         )
 
+    @unittest.expectedFailure
     @mock.patch('sh.Command')
     def test_restore_files(self, Command):
         class temp_glob:
