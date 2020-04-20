@@ -354,7 +354,7 @@ def cleanup_and_restore_files(process):
 
     # Recreate the postgres directory and set permissions
     sh.mkdir(process.postgres_system_backup)
-    sh.chown('polkitd:root', f'{process.postgres_system_backup}')
+    sh.chown('999:root', f'{process.postgres_system_backup}')
     sh.chmod('700', f'{process.postgres_system_backup}')
 
     return
