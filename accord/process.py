@@ -200,55 +200,48 @@ def backup_ingress_definitions(process):
 
 
 def sanitize_secrets_config_maps(process):
+
+    def _remove_fields(temp_yaml, metadata_to_clear):
+        """
+        For now just create function for repetitive code that's only used here
+        """
+        with open(temp_yaml, 'r') as f:
+            data = yaml.load(f, Loader=yaml.FullLoader)
+
+        for label in metadata_to_clear:
+            try:
+                del data['metadata'][label]
+            except Exception:
+                # Means the key is not there which is ok if it is not
+                pass
+
+
+        with open(temp_yaml, 'w') as f:
+            yaml.dump(data, f, default_flow_style=False)
+
+    # back to original function
+    # f:type in managedFields is causing validation failure; for now just remove section
     metadata_to_clear = [
         "creationTimestamp",
         "resourceVersion",
         "generation",
         "selfLink",
-        "uid"
-    ]
+        "uid",
+        "managedFields"]
+
     for namespace, secrets in process.secret_files.items():
         for secret in secrets:
             temp_secret = f'{process.backup_directory}/secrets/{secret}.yaml'
-            with open(temp_secret, 'r') as f:
-                data = yaml.load(f, Loader=yaml.FullLoader)
-
-            for label in metadata_to_clear:
-                try:
-                    del data['metadata'][label]
-                except Exception:
-                    # Means the key is not there which is ok if it is not
-                    pass
-
-            with open(temp_secret, 'w') as f:
-                yaml.dump(data, f, default_flow_style=False)
-
+            _remove_fields(temp_secret, metadata_to_clear)
+            
     for namespace, config_maps in process.config_maps.items():
         for cm in config_maps:
             temp_cm = f'{process.backup_directory}/secrets/{cm}.yaml'
-            with open(temp_cm, 'r') as f:
-                data = yaml.load(f, Loader=yaml.FullLoader)
-
-            for label in metadata_to_clear:
-                try:
-                    del data['metadata'][label]
-                except Exception:
-                    # Means the key is not there which is ok if it is not
-                    pass
-
-            with open(temp_cm, 'w') as f:
-                yaml.dump(data, f, default_flow_style=False)
-
+            _remove_fields(temp_cm, metadata_to_clear)
+           
     ingress_files = glob.glob(f'{process.backup_directory}/ingress/*.yaml')
     for ingress in ingress_files:
-        with open(ingress, 'r') as f:
-            data = yaml.load(f, Loader=yaml.FullLoader)
-
-        for label in metadata_to_clear:
-            del data['metadata'][label]
-
-        with open(ingress, 'w') as f:
-            yaml.dump(data, f, default_flow_style=False)
+        _remove_fields(ingress, metadata_to_clear)
 
 
 def sync_files(process):
@@ -361,7 +354,7 @@ def cleanup_and_restore_files(process):
 
     # Recreate the postgres directory and set permissions
     sh.mkdir(process.postgres_system_backup)
-    sh.chown('polkitd:root', f'{process.postgres_system_backup}')
+    sh.chown('999:root', f'{process.postgres_system_backup}')
     sh.chmod('700', f'{process.postgres_system_backup}')
 
     return
@@ -463,6 +456,13 @@ def cleanup_postgres_database(process):
 def restoring_files(process):
     # Grab all of the yaml files that were backed up and replace/create them
     # within the restore cluster
+
+    def restore_resource(restore_file, action='replace'):
+        # replace or create a resource
+        replace_return = process.kubectl(action, '-f', restore_file)
+        log.info(f'{action} resource {restore_file}')
+        log.info(f'Command returned: {replace_return}')
+
     restore_files = glob.glob(f'{process.backup_directory}/secrets/*.yaml')
     for restore in restore_files:
         if (
@@ -472,27 +472,15 @@ def restoring_files(process):
             log.info('Skipping platform config due to passed in option')
             continue
 
-        restored = False
-        if 'anaconda-enterprise-certs.yaml' in restore:
-            # The secrets which are the SSL certs need to be replaced
+        try:
+            restore_resource(restore)
+        except sh.ErrorReturnCode_1:
+            log.info(f'Failed to replace {restore}')
             try:
-                secret_return = process.kubectl('replace', '-f', restore)
-                if 'replaced' in secret_return:
-                    restored = True
+                restore_resource(restore, action='create')
             except sh.ErrorReturnCode_1:
-                log.error(f'File {restore} was not able to be replaced')
-        else:
-            try:
-                replace_return = process.kubectl('apply', '-f', restore)
-                if 'replaced' in replace_return or 'created' in replace_return:
-                    restored = True
-            except sh.ErrorReturnCode_1:
-                log.error(
-                    f'File {restore} was not able to be applied'
-                )
-
-        if restored:
-            log.info(f'File {restore} was successfully applied')
+                log.info(f'Failed to create {restore}')
+                log.error(f'Resource {restore} not restored')
 
 
 def restoring_ingress(process):
